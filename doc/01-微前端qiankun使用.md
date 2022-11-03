@@ -1,11 +1,11 @@
 ## 微前端 qiankun 的使用
 ### 要点
-- 创建主、子应用工程
-- 主应用安装 qiankun
+1. 创建主、子应用工程
+2. 主应用安装 qiankun
   ```js
   yarn add qiankun
   ```
-- 主应用配置：注册子应用并启动
+3. 主应用配置：注册子应用并启动微前端服务
   ```js
   import Vue from 'vue'
   import App from './App.vue'
@@ -18,6 +18,7 @@
 
   //子应用列表
   let apps = [
+    // 当匹配到 activeRule 的时候，请求获取 entry 资源，渲染到 主应用的container 中
     {
       name:'subapp',
       entry:'//localhost:8080',//子应用的地址，这里演示是本地启动的地址。
@@ -36,7 +37,14 @@
     render: h => h(App),
   }).$mount('#app')
   ```
-- 子应用配置 `public-path.js` 和 `main.js`, 并暴露生命周期钩子
+4. 子应用配置 `public-path.js` 和 `main.js`, 并暴露生命周期钩子
+  - 导出三个必要的生命周期函数
+    - bootstrap: 渲染之前
+    - mount: 渲染函数
+    - unmount: 卸载函数
+  - 生命周期函数必须返回 `promise`
+  - `container.querySelector('#app')`: 先圈定主应用的范围 `container`，然后在这个范围内找到子应用挂载节点
+    
   ```js
   // public-path.js
   if (window.__POWERED_BY_QIANKUN__) {
@@ -69,13 +77,18 @@
     console.log('[vue] props from main framework', props);
     render(props);
   }
+  // 一般切换应用的时候用到
   export async function unmount() {
     instance.$destroy();
     instance.$el.innerHTML = '';
     instance = null;
   }
   ```
-- 子应用打包配置
+5. 子应用打包配置
+  - 允许 `CORS` 跨域，主应用访问子应用地址
+  - 子应用必须打包成一个库格式，且格式必须为 `umd`,因为主应用要加载子应用的资源，如 html、js等，如果主应用要获取子应用资源，模块必须格式需兼容
+  - `jsonpFunction` : 如果通过 `jsonp` 方式加载子应用资源，对应的 `jsonp` 的回调函数名称
+
   ```js
   // vue.config.js
   const { name } = require('./package');
