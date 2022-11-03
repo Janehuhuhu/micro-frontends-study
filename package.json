@@ -15,5 +15,8 @@
   "bugs": {
     "url": "https://github.com/Janehuhuhu/micro-frontends-study/issues"
   },
-  "homepage": "https://github.com/Janehuhuhu/micro-frontends-study#readme"
+  "homepage": "https://github.com/Janehuhuhu/micro-frontends-study#readme",
+  "devDependencies": {
+    "lerna": "^4.0.0"
+  }
 }
