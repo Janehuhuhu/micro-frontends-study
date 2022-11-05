@@ -18,5 +18,8 @@
   "homepage": "https://github.com/Janehuhuhu/micro-frontends-study#readme",
   "devDependencies": {
     "lerna": "^4.0.0"
+  },
+  "dependencies": {
+    "element-ui": "^2.15.10"
   }
 }
