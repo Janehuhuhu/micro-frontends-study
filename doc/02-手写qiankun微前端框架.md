@@ -4,13 +4,14 @@
 3. 加载子应用
 4. 渲染子应用
 
-### SPA 监听路由（如何实现的路由）
+### 路由劫持（SPA 监听路由, 如何实现的路由）
 - hash 路由： window.onhashchange，通过事件监听
 - history路由
   - window.onpopstate: history.go、history.back、history.forward，通过事件监听
   - pushState、replaceState 需通过函数重写的方式进行劫持
 
-### 初始执行匹配
+### 微应用加载
+#### 初始执行匹配
 - 匹配子应用
   - 获取到当前的路由路径
   - 去子应用注册表中查找
@@ -31,6 +32,81 @@
     - 切换子应用时销毁原子应用 unmounted
     - 获取子应用的生命周期钩子，并执行 bootstrap、 mounted
 
-### umd 打包结果分析
+#### umd 打包结果分析
 ```js
 ```
+
+#### 图片静态资源加载失败
+webpack 在运行时生成的路径会自动拼接上这个全局变量(如果有的话)
+```js
+__webpack_public_path__ = 'xxxx'
+```
+```js
+// public-path.js
+if (window.__POWERED_BY_QIANKUN__) {
+  // __INJECTED_PUBLIC_PATH_BY_QIANKUN__ 设置为子应用的 entry
+  __webpack_public_path__ = window.__INJECTED_PUBLIC_PATH_BY_QIANKUN__
+}
+// main.js
+import 'public-path.js'
+```
+
+<br>
+
+### CSS 隔离
+
+#### 方式一： shadow dom
+-  qiankun 中使用
+```js
+start({
+  strictStyleIsolation: true // 使用shadow dom 解决样式冲突
+})
+```
+
+-  原理
+[详情](https://developer.mozilla.org/zh-CN/docs/Web/API/Element/attachShadow)
+```html
+<body>
+  <p>hello</p>
+  <!-- 子应用内容 -->
+  <div id="subapp"></div>
+  <script>
+    const subApp = document.getElementById('subapp')
+    const shadow = subApp.attachShadow({mode: 'open'})
+    shadow.innerHTML = `
+      <p>这是通过 shadow dom 添加的内容</p>
+      <style>
+        p {color: red}
+      </style>
+    `
+  </script>
+</body>
+```
+<br>
+
+#### 方式二： shadow dom
+-  qiankun 中使用
+```js
+start({
+  experimentalStyleIsolation: true // 使用选择器范围来解决样式冲突
+})
+```
+- 原理
+给子应用所有样式放在 `data-qiankun="app-vue2"` 空间下
+```js
+div[data-qiankun="app-vue2"] #app[data-v-xxx] {
+  color: red
+}
+```
+
+<br>
+
+### JS 沙箱
+- 快照沙箱
+- javascript 沙箱
+
+### 状态管理
+
+### 应用通信
+
+
