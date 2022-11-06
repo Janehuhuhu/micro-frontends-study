@@ -1,5 +1,5 @@
 <template>
-  <el-aside width="100px">
+  <div>
     <div class="aside-item"><router-link to="/">首页</router-link></div>
     <div class="aside-item">
       <a href="http://localhost:8081/subapp-vue">vue</a>
@@ -7,7 +7,7 @@
     <div class="aside-item">
       <a href="http://localhost:8081/subapp-react">react</a>
     </div>
-  </el-aside>
+  </div>
 </template>
 <script>
 export default {
@@ -23,13 +23,7 @@ export default {
   height: 40px;
   cursor: pointer;
 }
-.el-aside {
-  background-color: #ccc;
-  color: #333;
-  text-align: center;
-  line-height: 40px;
-  padding-top: 20px;
-}
+
 /*包含以下四种的链接*/
 a {
   text-decoration: none;

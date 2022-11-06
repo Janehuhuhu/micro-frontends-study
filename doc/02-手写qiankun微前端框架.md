@@ -110,3 +110,12 @@ div[data-qiankun="app-vue2"] #app[data-v-xxx] {
 ### 应用通信
 
 
+
+<br>
+
+## 相关材料
+- [视频教程-手写qiankun微前端框架](https://www.bilibili.com/video/BV1H34y117fe/?spm_id_from=333.337.search-card.all.click&vd_source=65105152fda76ce4f74f171879bbdcac)
+- [手写微前端 simple-qiankun](https://juejin.cn/post/7079379620348313637)
+- [从零开始写一个微前端框架-沙箱篇](https://github.com/micro-zoe/micro-app/issues/19)
+
+

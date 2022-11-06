@@ -11,7 +11,6 @@
 - [微前端qiankun（vue）使用教程](https://juejin.cn/post/7007714510186217508)
 - [微前端vue项目实战 -- 乾坤qiankun框架 （一）](https://blog.csdn.net/csl125/article/details/122990142)
 - [qiankun](https://qiankun.umijs.org/zh/guide)
-- [视频教程-手写qiankun微前端框架](https://www.bilibili.com/video/BV1H34y117fe/?spm_id_from=333.337.search-card.all.click&vd_source=65105152fda76ce4f74f171879bbdcac)
 
 <br>
 
