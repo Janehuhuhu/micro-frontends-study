@@ -1,5 +1,4 @@
 import '../public-path'
-import '../public-path'
 import Vue from 'vue'
 import App from './App.vue'
 

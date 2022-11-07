@@ -37,7 +37,13 @@
 ```
 
 #### 图片静态资源加载失败
-webpack 在运行时生成的路径会自动拼接上这个全局变量(如果有的话)
+- 问题
+  - 主应用启动 `http://localhost:8081/`，子应用启动 `http://localhost:3000/`，子应用静态资源地址为 `http://localhost:3000/static/xxx`，用主应用启动访问的资源地址为 `http://localhost:8081/static/xxx`，一定会访问失败
+- 解决
+  - `webpack` 在运行时生成的路径会自动拼接上这个全局变量(如果有的话),即静态资源加载会带上这个变量, 即实际在主应用中访问的子应用资源地址为 `http://localhost:3000/static/xxx`
+  - 新增 `public-path.js` 文件，用于修改运行时的 `publicPath`（通过它来指定应用程序中所有资源的基础路径）。什么是运行时的 [publicPath](https://webpack.docschina.org/guides/public-path/#on-the-fly) 
+  - 注意点：在子应用入口文件中一定要放在最顶部！！！
+  
 ```js
 __webpack_public_path__ = 'xxxx'
 ```
