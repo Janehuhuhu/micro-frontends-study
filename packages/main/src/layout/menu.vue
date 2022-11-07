@@ -2,10 +2,14 @@
   <div>
     <div class="aside-item"><router-link to="/">首页</router-link></div>
     <div class="aside-item">
-      <a href="http://localhost:8081/subapp-vue">vue</a>
+      <router-link to="subapp-vue">vue</router-link>
+
+      <!-- <a href="http://localhost:8081/subapp-vue">vue</a> -->
     </div>
     <div class="aside-item">
-      <a href="http://localhost:8081/subapp-react">react</a>
+      <router-link to="subapp-react">react</router-link>
+
+      <!-- <a href="http://localhost:8081/subapp-react">react</a> -->
     </div>
   </div>
 </template>

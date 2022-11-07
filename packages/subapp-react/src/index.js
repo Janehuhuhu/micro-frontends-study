@@ -1,8 +1,9 @@
+import './public-path'
+import './public-path'
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import './index.css';
 import App from './App';
-import './public-path'
 
 
 function render(props = {}) {
@@ -31,5 +32,7 @@ export async function mount(props) {
 }
 export async function unmount(props) {
   const { container } = props;
-  ReactDOM.unmountComponentAtNode(container ? container.querySelector('#root') : document.querySelector('#root'));
+  console.log('==== react 卸载 ====', container ? container.querySelector('#root') : document.querySelector('#root'))
+  // 不注释时会导致卸载失败
+  // ReactDOM.unmountComponentAtNode(container ? container.querySelector('#root') : document.querySelector('#root'));
 }

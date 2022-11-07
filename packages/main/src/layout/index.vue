@@ -47,6 +47,7 @@ export default {
   color: #333;
   text-align: center;
   line-height: 160px;
+  padding: 0;
 }
 .el-aside {
   background-color: #ccc;
