@@ -3,7 +3,9 @@ import ElementUI from 'element-ui';
 import 'element-ui/lib/theme-chalk/index.css';
 
 //qiankun配置
-import { registerMicroApps, start } from 'qiankun';
+// import { registerMicroApps, start } from 'qiankun';
+import { registerMicroApps, start } from './micro-fe';
+
 import App from './App.vue'
 import router from './router'
 
@@ -11,7 +13,6 @@ Vue.use(ElementUI);
 
 
 Vue.config.productionTip = false
-
 
 
 //子应用列表
