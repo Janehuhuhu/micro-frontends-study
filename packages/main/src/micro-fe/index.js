@@ -2,6 +2,7 @@
  * 手写微前端框架
  */
 import { rewriteRouter } from "./rewrite-router"
+import { handleRouter } from './handle-router'
 
 let _apps = []
 
@@ -21,4 +22,6 @@ export function start() {
   console.log('=== 启动 ===')
   // 路由劫持
   rewriteRouter()
+  // 页面刷新时避免页面不渲染
+  handleRouter()
 }

@@ -23,25 +23,6 @@ export default {
   color: #2c3e50;
   /* height: 100vh; */
 }
-.el-header {
-  background-color: #b3c0d1;
-  color: #333;
-  text-align: center;
-  line-height: 60px;
-}
-.el-main {
-  background-color: #e9eef3;
-  color: #333;
-  text-align: center;
-  line-height: 160px;
-}
-.el-aside {
-  background-color: #ccc;
-  color: #333;
-  text-align: center;
-  line-height: 40px;
-  padding-top: 20px;
-}
 .container {
   height: 100vh;
 }

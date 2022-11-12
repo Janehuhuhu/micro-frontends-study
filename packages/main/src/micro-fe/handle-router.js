@@ -25,12 +25,13 @@ export const handleRouter = async () => {
   if (!app) return
 
   // 加载子应用
-  const { template, execScripts } = await importHTML(app.entry)
+  const { template, execScripts } = await importHTML(app)
   const container = document.querySelector(app.container)
   container.appendChild(template)
 
   // 配置环境变量
   window.__POWERED_BY_QIANKUN__ = true
+  window.__INJECTED_PUBLIC_PATH_BY_QIANKUN__ = app.entry + '/'
 
   // 渲染子应用,获取生命周期，手动渲染
   const appCircle = await execScripts()
@@ -52,8 +53,11 @@ export const handleRouter = async () => {
   }
 
   async function unmount(app) {
+    const container = document.querySelector(app.container)
     app.unmount && (await app.unmount({
-      container: document.querySelector(app.container)
+      container
     }))
+    // 删除子应用除app外的其他节点，如script等
+    container.innerHTML = ''
   }
 }

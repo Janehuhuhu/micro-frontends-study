@@ -37,7 +37,7 @@ export default {
   /* height: 100vh; */
 }
 .el-header {
-  background-color: #b3c0d1;
+  background-color: rgb(229, 230, 236);
   color: #333;
   text-align: center;
   line-height: 60px;
@@ -50,7 +50,7 @@ export default {
   padding: 0;
 }
 .el-aside {
-  background-color: #ccc;
+  background-color: rgb(105, 118, 165);
   color: #333;
   text-align: center;
   line-height: 40px;
