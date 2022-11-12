@@ -2,9 +2,11 @@
  * 加载子应用资源
  */
 import axios from 'axios'
-// 加载html
+
 export const importHTML = async (app) => {
   const { entry, container } = app
+
+  // 加载html
   const res = await axios.get(entry)
   const template = document.createElement(`div`)
   template.innerHTML = res.data
@@ -22,6 +24,7 @@ export const importHTML = async (app) => {
       }
     }))
   }
+
   // 执行js
   const execScripts = async () => {
     console.log('===== 渲染子应用  =====')

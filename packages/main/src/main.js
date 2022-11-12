@@ -35,7 +35,9 @@ let apps = [
 registerMicroApps(apps);
 
 //启动
-start();
+start({
+  // sandbox: { strictStyleIsolation: true }
+});
 
 new Vue({
   render: h => h(App),

@@ -7,17 +7,29 @@
 <br>
 <br>
 
-### 路由劫持（SPA 监听路由, 如何实现的路由）
+## 路由劫持（SPA 监听路由, 如何实现的路由）
 - `hash` 路由： `window.onhashchange`，通过事件监听
 - `history` 路由
   - `window.onpopstate`: `history.go`、`history.back`、`history.forward`，通过事件监听
   - `pushState`、`replaceState` 需通过函数重写的方式进行劫持
+- 获取上一个路由和当前打开的路由，方便后续的子应用的卸载
 ```js
+import { handleRouter } from './handle-router'
+
+let prevRoute = ''
+let nextRoute = window.location.pathname
+
+export const getPrevRoute = () => prevRoute
+export const getNextRoute = () => nextRoute
+
 export const rewriteRouter = () => {
   // history路由
   // 监听前进、后退、跳转
   window.addEventListener('popstate', () => {
     console.log('=== 监听前进、后退、跳转 ===')
+    // popstate 触发的时候，路由已经完成导航了
+    prevRoute = nextRoute
+    nextRoute = window.location.pathname
     handleRouter()
   })
 
@@ -25,7 +37,9 @@ export const rewriteRouter = () => {
   const rawPushState = window.history.pushState
   window.history.pushState = (...args) => {
     console.log('=== pushState 监听 ===')
+    prevRoute = window.location.pathname
     rawPushState.apply(window.history, args)
+    nextRoute = window.location.pathname
     handleRouter()
   }
 
@@ -33,7 +47,9 @@ export const rewriteRouter = () => {
   const rawReplaceState = window.history.replaceState
   window.history.replaceState = (...args) => {
     console.log('=== replaceState 监听 ===')
+    prevRoute = window.location.pathname
     rawReplaceState.apply(window.history, args)
+    nextRoute = window.location.pathname
     handleRouter()
   }
 }
@@ -42,33 +58,149 @@ export const rewriteRouter = () => {
 <br>
 <br>
 
-### 微应用加载
+## 微应用加载
+### 加载时机
 - 初始执行匹配
-- 路由跳转执行匹配
-#### 初始执行匹配
-- 匹配子应用
-  - 获取到当前的路由路径
-  - 去子应用注册表中查找
+页面刷新时，因没有监听到路由变化，所以页面丢失了，需要手动调用 `handleRouter`
 
-- 加载子应用
-  - 配置全局环境变量，__POWERED_BY_QIANKUN
-  - 请求获取子应用的资源，HTML、CSS、JS
-  - 挂载
-    - 客户端渲染需要通过执行 JS 生成内容
-    - 浏览器出于安全考虑，innerHTML 中的 script 不会加载和执行
-  - 手动加载子应用的 script，执行 script 代码
-    - 解析 HTML 获取 script （第三方库 import-html-entry）
-      - template：Dom 节点
-      - getExternalScripts: 获取所有的 script 标签的代码：[代码,代码]
-      - execScripts: 获取并执行所有的 script 脚本代码
-    - 执行 script， eval 或 new Function
-    - 手动构造一个 CommonJS 模块环境，因为用 window 方式获取时每个子应用变量名称不同
-    - 切换子应用时销毁原子应用 unmounted
-    - 获取子应用的生命周期钩子，并执行 bootstrap、 mounted
+- 路由跳转时执行匹配
+路由跳转时执行 `rewriteRouter`, 即监听路由、渲染子应用 `handleRouter`
+  ```js
+  // main.js 中执行
+  // 启动
+  export function start() {
+    // 路由劫持
+    rewriteRouter()
+    // 初始执行匹配
+    handleRouter()
+  }
+  ```
+<br>
+
+### 初始执行匹配
+#### 匹配子应用
+获取到当前的路由路径，然后去子应用注册表中查找
+```js
+// handle-router.js
+const apps = getApps()
+// 匹配上一个子应用
+const prevApp = apps.find(item => getPrevRoute().startsWith(item.activeRule))
+// 匹配下一个子应用
+const app = apps.find(item => getNextRoute().startsWith(item.activeRule))
+```
+
+#### 加载子应用
+1. 卸载子应用
+```js
+// 加载前先卸载其他子应用
+prevApp && unmount(prevApp)
+// unmount
+async function unmount(app) {
+  const container = document.querySelector(app.container)
+  app.unmount && (await app.unmount({
+    container
+  }))
+  // 删除子应用除app外的其他节点，如script等
+  container.innerHTML = ''
+}
+```
+<br>
+
+2. 配置环境变量
+```js
+// 判断是否从主应用中渲染子应用，为false时是单独加载子应用，为true时从主应用中加载
+window.__POWERED_BY_QIANKUN__ = true
+// 静态资源加载公共路径，后面详细说到
+window.__INJECTED_PUBLIC_PATH_BY_QIANKUN__ = app.entry + '/'
+```
+<br>
+
+3. 加载子应用的资源（`HTML`、`JS`）：解析 `HTML` 获取 `script` （参考第三方库 `import-html-entry`）
+- template：`Dom` 节点
+- getExternalScripts: 获取所有的 `script` 标签的代码：[代码,代码]
+- execScripts: 获取并执行所有的 `script` 脚本代码
+```js
+// 加载html
+const res = await axios.get(entry)
+const template = document.createElement(`div`)
+template.innerHTML = res.data
+
+// 加载js
+const getExternalScripts = () => {
+  // 限定script查找范围，避免找到父节点的script标签
+  const scripts = document.querySelectorAll(`${container} script`)
+  return Promise.all(Array.from(scripts).map(item => {
+    const src = item.getAttribute('src')
+    if (src) {
+      return axios.get(src.startsWith('http') ? src : entry + src)
+    } else {
+      return Promise.resolve(item.innerHTML)
+    }
+  }))
+}
+```
+<br>
+  
+4. 渲染子应用（挂载）: 客户端渲染需要通过执行 `JS` 生成内容。浏览器出于安全考虑，`innerHTML` 中的 `script` 不会加载和执行,所以需要执行 `script` 代码
+- 执行 `script`， `eval` 或 `new Function`,手动构造一个 `CommonJS` 模块环境，因为用 `window` 方式获取时每个子应用变量名称不同
+```js
+const execScripts = async () => {
+  const res = await getExternalScripts()
+  // 执行js代码前手动构造一个 commonjs 模块环境,之前子应用打包配置的umd格式
+  const module = { exports: {} }
+  const exports = module.exports
+  res.forEach(item => eval(item?.data || item))
+  // 获取生命周期，方便手动调用
+  return module.exports
+}
+```
+<br>
+    
+5. 切换子应用时销毁原子应用 `unmounted`, 获取子应用的生命周期钩子，并执行 `bootstrap`、 `mounted`
+```js
+// 渲染子应用,获取生命周期，手动渲染
+const appCircle = await execScripts()
+app.bootstrap = appCircle.bootstrap
+app.mount = appCircle.mount
+app.unmount = appCircle.unmount
+bootstrap(app)
+mount(app)
+
+async function bootstrap(app) {
+  app.bootstrap && (await app.bootstrap())
+}
+async function mount(app) {
+  app.mount && (await app.mount({
+    container: document.querySelector(app.container)
+  }))
+}
+```
+<br>
 
 #### umd 打包结果分析
 ```js
+(function (n, t) {
+  // n: window
+  // t: 子应用代码导出结果
+  // CommonJS2 模块规范
+  "object" === typeof exports && "object" === typeof module
+    ? (module.exports = t())
+
+    // 兼容 AMD 模块规范
+    : "function" === typeof define && define.amd
+    ? define([], t)
+
+    // CommonJS
+    : "object" === typeof exports
+    ? (exports["subapp-app-123"] = t())
+
+    // window[xxx] = t()
+    : (n["subapp-app-123"] = t());
+})(self, function () {});
+
 ```
+
+<br>
 
 #### 图片静态资源加载失败
 - 问题
@@ -90,24 +222,14 @@ if (window.__POWERED_BY_QIANKUN__) {
 // main.js
 import 'public-path.js'
 ```
+
+<br>
 <br>
 
-#### 页面刷新时页面丢失
-页面刷新时，因没有监听到路由变化，所以页面丢失了，需要手动调用
-```js
-// 启动
-export function start() {
-  // 路由劫持
-  rewriteRouter()
-  // 页面刷新时避免页面不渲染
-  handleRouter()
-}
-```
-<br>
 
-### CSS 隔离
+## CSS 隔离
 
-#### 方式一： shadow dom
+### 方式一： shadow dom
 -  qiankun 中使用
 ```js
 start({
@@ -136,7 +258,7 @@ start({
 ```
 <br>
 
-#### 方式二： shadow dom
+### 方式二： 选择器范围
 -  qiankun 中使用
 ```js
 start({
@@ -151,6 +273,7 @@ div[data-qiankun="app-vue2"] #app[data-v-xxx] {
 }
 ```
 
+<br>
 <br>
 
 ### JS 沙箱
