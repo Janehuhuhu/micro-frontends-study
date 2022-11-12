@@ -25,7 +25,8 @@ export async function mount(props) {
   console.log('[vue] props from main framework', props);
   render(props);
 }
-export async function unmount() {
+export async function unmount(props) {
+  const { container } = props
   instance.$destroy();
   instance.$el.innerHTML = '';
   instance = null;

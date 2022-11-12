@@ -4,13 +4,47 @@
 3. 加载子应用
 4. 渲染子应用
 
+<br>
+<br>
+
 ### 路由劫持（SPA 监听路由, 如何实现的路由）
-- hash 路由： window.onhashchange，通过事件监听
-- history路由
-  - window.onpopstate: history.go、history.back、history.forward，通过事件监听
-  - pushState、replaceState 需通过函数重写的方式进行劫持
+- `hash` 路由： `window.onhashchange`，通过事件监听
+- `history` 路由
+  - `window.onpopstate`: `history.go`、`history.back`、`history.forward`，通过事件监听
+  - `pushState`、`replaceState` 需通过函数重写的方式进行劫持
+```js
+export const rewriteRouter = () => {
+  // history路由
+  // 监听前进、后退、跳转
+  window.addEventListener('popstate', () => {
+    console.log('=== 监听前进、后退、跳转 ===')
+    handleRouter()
+  })
+
+  // pushState 监听
+  const rawPushState = window.history.pushState
+  window.history.pushState = (...args) => {
+    console.log('=== pushState 监听 ===')
+    rawPushState.apply(window.history, args)
+    handleRouter()
+  }
+
+  // replaceState 监听
+  const rawReplaceState = window.history.replaceState
+  window.history.replaceState = (...args) => {
+    console.log('=== replaceState 监听 ===')
+    rawReplaceState.apply(window.history, args)
+    handleRouter()
+  }
+}
+```
+
+<br>
+<br>
 
 ### 微应用加载
+- 初始执行匹配
+- 路由跳转执行匹配
 #### 初始执行匹配
 - 匹配子应用
   - 获取到当前的路由路径
@@ -43,7 +77,7 @@
   - `webpack` 在运行时生成的路径会自动拼接上这个全局变量(如果有的话),即静态资源加载会带上这个变量, 即实际在主应用中访问的子应用资源地址为 `http://localhost:3000/static/xxx`
   - 新增 `public-path.js` 文件，用于修改运行时的 `publicPath`（通过它来指定应用程序中所有资源的基础路径）。什么是运行时的 [publicPath](https://webpack.docschina.org/guides/public-path/#on-the-fly) 
   - 注意点：在子应用入口文件中一定要放在最顶部！！！
-  
+
 ```js
 __webpack_public_path__ = 'xxxx'
 ```
@@ -56,7 +90,19 @@ if (window.__POWERED_BY_QIANKUN__) {
 // main.js
 import 'public-path.js'
 ```
+<br>
 
+#### 页面刷新时页面丢失
+页面刷新时，因没有监听到路由变化，所以页面丢失了，需要手动调用
+```js
+// 启动
+export function start() {
+  // 路由劫持
+  rewriteRouter()
+  // 页面刷新时避免页面不渲染
+  handleRouter()
+}
+```
 <br>
 
 ### CSS 隔离
