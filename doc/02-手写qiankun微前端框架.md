@@ -228,7 +228,7 @@ import 'public-path.js'
 
 
 ## CSS 隔离
-
+如果不进行样式隔离，子应用的样式会影响到主应用的样式
 ### 方式一： shadow dom
 -  qiankun 中使用
 ```js
@@ -246,6 +246,9 @@ start({
   <div id="subapp"></div>
   <script>
     const subApp = document.getElementById('subapp')
+    // mode 指定 Shadow DOM 树封装模式的字符串
+    // open 表示 shadow root 元素可以从 js 外部访问根节点
+    // closed 表示拒绝从 js 外部访问关闭的 shadow root 节点
     const shadow = subApp.attachShadow({mode: 'open'})
     shadow.innerHTML = `
       <p>这是通过 shadow dom 添加的内容</p>
@@ -256,6 +259,11 @@ start({
   </script>
 </body>
 ```
+
+样例：
+<img src="../other/src/assets/shadow-root.png" />
+
+<br>
 <br>
 
 ### 方式二： 选择器范围
@@ -277,6 +285,23 @@ div[data-qiankun="app-vue2"] #app[data-v-xxx] {
 <br>
 
 ### JS 沙箱
+#### 问题
+- 1、子应用向 `window` 上添加一个全局变量：*globalStr='child'*，如果此时基座应用也有一个相同的全局变量：*globalStr='parent'*，此时就产生了变量冲突，基座应用的变量会被覆盖。
+
+- 2、子应用渲染后通过监听 `scroll` 添加了一个全局监听事件
+  ```js
+  window.addEventListener('scroll', () => {
+    console.log('scroll')
+  })
+  ```
+  当子应用被卸载时，监听函数却没有解除绑定，对页面滚动的监听一直存在。如果子应用二次渲染，监听函数会绑定两次，这显然是错误的。
+
+<br>
+
+#### 思路
+- 创建代理，并在代理内增删改查想要的值，然后用 `with` 修改 `javascript` 执行的作用域
+
+#### 具体
 - 快照沙箱
 - javascript 沙箱
 
@@ -292,5 +317,7 @@ div[data-qiankun="app-vue2"] #app[data-v-xxx] {
 - [视频教程-手写qiankun微前端框架](https://www.bilibili.com/video/BV1H34y117fe/?spm_id_from=333.337.search-card.all.click&vd_source=65105152fda76ce4f74f171879bbdcac)
 - [手写微前端 simple-qiankun](https://juejin.cn/post/7079379620348313637)
 - [从零开始写一个微前端框架-沙箱篇](https://github.com/micro-zoe/micro-app/issues/19)
+- [浅析 JavaScript 沙箱机制](https://zhuanlan.zhihu.com/p/428039764)
+- [说说微前端JS沙箱实现的几种方式](https://juejin.cn/post/6981374562877308936)
 
 
