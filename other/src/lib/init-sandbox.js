@@ -14,7 +14,7 @@ const func2 = () => {
 }
 
 const ctxProxy = new Proxy(ctx, {
-  // with:如果返回true，则表示从对象中寻找，否则是从全局寻找
+  // with查找路径:如果返回true，则表示从对象中寻找，否则是从全局寻找
   has(target, prop) {
     if (prop in target) {
       return true

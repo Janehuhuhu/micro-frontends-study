@@ -299,7 +299,225 @@ div[data-qiankun="app-vue2"] #app[data-v-xxx] {
 <br>
 
 #### 思路
-- 创建代理，并在代理内增删改查想要的值，然后用 `with` 修改 `javascript` 执行的作用域
+- 1、创建代理，并在代理内增删改查想要的值，然后用 `with` 修改 `javascript` 执行的作用域
+  ```js
+  // /src/sandbox.js，增删改查
+  export default class SandBox {
+    active = false // 沙箱是否在运行
+    microWindow = {} // // 代理的对象
+    injectedKeys = new Set() // 新添加的属性，在卸载时清空
+
+    constructor () {
+      this.proxyWindow = new Proxy(this.microWindow, {
+        // 取值
+        get: (target, key) => {
+          // 优先从代理对象上取值
+          if (Reflect.has(target, key)) {
+            return Reflect.get(target, key)
+          }
+
+          // 否则兜底到window对象上取值
+          const rawValue = Reflect.get(window, key)
+
+          // 如果兜底的值为函数，则需要绑定window对象，如：console、alert等
+          if (typeof rawValue === 'function') {
+            const valueStr = rawValue.toString()
+            // 排除构造函数
+            if (!/^function\s+[A-Z]/.test(valueStr) && !/^class\s+/.test(valueStr)) {
+              return rawValue.bind(window)
+            }
+          }
+
+          // 其它情况直接返回
+          return rawValue
+        },
+        // 设置变量
+        set: (target, key, value) => {
+          // 沙箱只有在运行时可以在代理对象中设置变量
+          if (this.active) {
+            Reflect.set(target, key, value)
+
+            // 记录添加的变量，用于后续清空操作
+            this.injectedKeys.add(key)
+          }
+
+          return true
+        },
+        deleteProperty: (target, key) => {
+          // 当前key存在于代理对象上时才满足删除条件
+          if (target.hasOwnProperty(key)) {
+            return Reflect.deleteProperty(target, key)
+          }
+          return true
+        },
+      })
+    }
+
+    ...
+  }
+  ```
+  ```js
+  // /src/sandbox.js
+  export default class SandBox {
+    ...
+    // 启动
+    start () {
+      if (!this.active) {
+        this.active = true
+      }
+    }
+
+    // 停止
+    stop () {
+      if (this.active) {
+        this.active = false
+        // 清空变量
+        this.injectedKeys.forEach((key) => {
+          Reflect.deleteProperty(this.microWindow, key)
+        })
+        this.injectedKeys.clear()
+      }
+    }
+  }
+  ```
+  ```js
+  // 构造一个 with 来包裹需要执行的代码，返回 with 代码块的一个函数实例
+  function withedYourCode(code) {
+    code = 'with(globalObj) {' + code + '}'
+    return new Function('globalObj', code)
+  }
+  ```
+
+  使用沙箱,在 `src/app.js` 中引入沙箱，在 `CreateApp` 的构造函数中创建沙箱实例，并在 `mount` 方法中执行沙箱的 `start` 方法，在 `unmount` 方法中执行沙箱的 `stop` 方法。
+
+
+  ```js
+  // /src/app.js
+  import loadHtml from './source'
+  + import Sandbox from './sandbox'
+
+  export default class CreateApp {
+    constructor ({ name, url, container }) {
+      ...
+  +    this.sandbox = new Sandbox(name)
+    }
+
+    ...
+    mount () {
+      ...
+  +    this.sandbox.start()
+      // 执行js
+      this.source.scripts.forEach((info) => {
+        (0, eval)(info.code)
+      })
+    }
+
+    /**
+    * 卸载应用
+    * @param destory 是否完全销毁，删除缓存资源
+    */
+    unmount (destory) {
+      ...
+  +    this.sandbox.stop()
+      // destory为true，则删除应用
+      if (destory) {
+        appInstanceMap.delete(this.name)
+      }
+    }
+  }
+  ```
+  
+- 2、在沙箱中重写 `window.addEventListener` 和 `window.removeEventListener` ，记录所有全局监听事件，在应用卸载时如果有残余的全局监听事件则进行清空。在沙箱的**构造函数**中执行得到卸载的钩子函数 `releaseEffect`，在沙箱**关闭时**执行卸载操作，也就是在 `stop` 方法中执行 `releaseEffect` 函数
+  ```js
+  // /src/sandbox.js
+  // 记录addEventListener、removeEventListener原生方法
+  const rawWindowAddEventListener = window.addEventListener
+  const rawWindowRemoveEventListener = window.removeEventListener
+
+  /**
+  * 重写全局事件的监听和解绑
+  * @param microWindow 原型对象
+  */
+  function effect (microWindow) {
+    // 使用Map记录全局事件
+    const eventListenerMap = new Map()
+
+    // 重写addEventListener
+    microWindow.addEventListener = function (type, listener, options) {
+      const listenerList = eventListenerMap.get(type)
+      // 当前事件非第一次监听，则添加缓存
+      if (listenerList) {
+        listenerList.add(listener)
+      } else {
+        // 当前事件第一次监听，则初始化数据
+        eventListenerMap.set(type, new Set([listener]))
+      }
+      // 执行原生监听函数
+      return rawWindowAddEventListener.call(window, type, listener, options)
+    }
+
+    // 重写removeEventListener
+    microWindow.removeEventListener = function (type, listener, options) {
+      const listenerList = eventListenerMap.get(type)
+      // 从缓存中删除监听函数
+      if (listenerList?.size && listenerList.has(listener)) {
+        listenerList.delete(listener)
+      }
+      // 执行原生解绑函数
+      return rawWindowRemoveEventListener.call(window, type, listener, options)
+    }
+
+    // 清空残余事件
+    return () => {
+      console.log('需要卸载的全局事件', eventListenerMap)
+      // 清空window绑定事件
+      if (eventListenerMap.size) {
+        // 将残余的没有解绑的函数依次解绑
+        eventListenerMap.forEach((listenerList, type) => {
+          if (listenerList.size) {
+            for (const listener of listenerList) {
+              rawWindowRemoveEventListener.call(window, type, listener)
+            }
+          }
+        })
+        eventListenerMap.clear()
+      }
+    }
+  }
+  ```
+
+  ```js
+  // 执行时机
+  // /src/sandbox.js
+  export default class SandBox {
+    ...
+    // 修改js作用域
+    constructor () {
+      // 卸载钩子
+  +   this.releaseEffect = effect(this.microWindow)
+      ...
+    }
+
+    stop () {
+      if (this.active) {
+        this.active = false
+
+        // 清空变量
+        this.injectedKeys.forEach((key) => {
+          Reflect.deleteProperty(this.microWindow, key)
+        })
+        this.injectedKeys.clear()
+        
+        // 卸载全局事件
+  +      this.releaseEffect()
+      }
+    }
+  }
+  ```
+
+
+
+
 
 #### 具体
 - 快照沙箱
