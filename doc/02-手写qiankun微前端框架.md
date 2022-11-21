@@ -274,7 +274,7 @@ start({
 })
 ```
 - 原理
-给子应用所有样式放在 `data-qiankun="app-vue2"` 空间下
+给子应用所有样式放在 `data-qiankun="app-vue2"` 空间下,详见[从零开始写一个微前端框架-样式隔离篇](https://github.com/micro-zoe/micro-app/issues/20)
 ```js
 div[data-qiankun="app-vue2"] #app[data-v-xxx] {
   color: red
